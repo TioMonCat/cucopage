@@ -4,8 +4,8 @@
 // ==========================================================
 
 import { jsonResponse, errorResponse } from '../utils/response.js';
-import { getLinkByToken, incrementPhotoCount, addPhoto, addLog, updateLinkStatus } from '../services/db.js';
-import { savePhotoToR2 } from '../services/storage.js';
+import { getLinkByToken, incrementPhotoCount, addPhoto, addLog, updateLinkStatus, getPhotoById, deletePhotoRecord, decrementPhotoCount } from '../services/db.js';
+import { savePhotoToR2, deletePhotoFromR2 } from '../services/storage.js';
 import { validateImageMagicBytes, sanitizeFilename } from '../utils/validation.js';
 
 export async function handleUpload(request, env, origin) {
@@ -186,5 +186,70 @@ export async function handleCompleteUpload(request, env, origin) {
         success: true,
         message: 'Entrega finalizada con éxito. Gracias por subir tus fotos.',
         uploaded_count: link.uploaded_count
+    }, 200, env, origin);
+}
+
+/**
+ * Permite al cliente eliminar una foto que subió previamente (para liberar cupo o corregir un error).
+ */
+export async function handleClientDeletePhoto(request, env, origin, photoId) {
+    const url = new URL(request.url);
+    const token = url.searchParams.get('token');
+
+    if (!token) {
+        return errorResponse('Token no especificado.', 400, env, origin);
+    }
+
+    const link = await getLinkByToken(env.DB, token);
+    if (!link) {
+        return errorResponse('Enlace no encontrado.', 404, env, origin);
+    }
+
+    if (link.status === 'expirado' || link.seconds_remaining <= 0) {
+        return errorResponse('El enlace ha expirado por tiempo límite.', 410, env, origin);
+    }
+
+    if (link.status === 'revocado') {
+        return errorResponse('Este enlace ha sido revocado.', 403, env, origin);
+    }
+
+    if (link.status === 'entregado') {
+        return errorResponse('El trabajo ya fue entregado y no se pueden realizar modificaciones.', 403, env, origin);
+    }
+
+    const photo = await getPhotoById(env.DB, photoId);
+    if (!photo || photo.link_id !== link.id) {
+        return errorResponse('Foto no encontrada o no pertenece a este enlace.', 404, env, origin);
+    }
+
+    // 1. Eliminar de R2
+    await deletePhotoFromR2(env.PHOTOS_BUCKET, photo.r2_key);
+
+    // 2. Eliminar de D1
+    await deletePhotoRecord(env.DB, photoId);
+
+    // 3. Decrementar contador
+    await decrementPhotoCount(env.DB, link.id);
+
+    const updatedLink = await getLinkByToken(env.DB, token);
+    const ip = request.headers.get('cf-connecting-ip') || '';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    await addLog(env.DB, {
+        link_id: link.id,
+        token: link.token,
+        event_type: 'foto_eliminada_cliente',
+        details: `El cliente eliminó la foto "${photo.filename}". Cupo actual: ${updatedLink.uploaded_count}/${updatedLink.max_photos}`,
+        ip_address: ip,
+        user_agent: userAgent
+    });
+
+    return jsonResponse({
+        success: true,
+        message: 'Foto eliminada correctamente.',
+        photo_id: photoId,
+        uploaded_count: updatedLink.uploaded_count,
+        remaining_photos: Math.max(0, updatedLink.max_photos - updatedLink.uploaded_count),
+        max_photos: updatedLink.max_photos
     }, 200, env, origin);
 }

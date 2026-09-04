@@ -4,7 +4,7 @@
 
 import { corsPreflightResponse, jsonResponse, errorResponse } from './utils/response.js';
 import { handleValidate } from './routes/validate.js';
-import { handleUpload, handleCompleteUpload } from './routes/upload.js';
+import { handleUpload, handleCompleteUpload, handleClientDeletePhoto } from './routes/upload.js';
 import { handlePhotoServe } from './routes/photos.js';
 import {
     handleAdminLogin,
@@ -52,6 +52,13 @@ export default {
 
             if (path === '/api/upload/complete' && method === 'POST') {
                 return await handleCompleteUpload(request, env, origin);
+            }
+
+            // Eliminación de fotos por parte del cliente
+            const clientDeleteMatch = path.match(/^\/api\/upload\/photo\/(\d+)$/);
+            if (clientDeleteMatch && method === 'DELETE') {
+                const photoId = parseInt(clientDeleteMatch[1], 10);
+                return await handleClientDeletePhoto(request, env, origin, photoId);
             }
 
             // Transmisión / Descarga de Fotos

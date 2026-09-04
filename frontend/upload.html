@@ -101,6 +101,40 @@
                 <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
             </div>
 
+            <!-- Aviso de cupo completo pero con fotos visibles -->
+            <div id="quota-exhausted-notice" class="glass-card" style="display: none; padding: 1.5rem; text-align: center; margin-bottom: 2rem; border-color: rgba(16, 185, 129, 0.4);">
+                <span style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;">✅ Cupo de Fotos Completo</span>
+                <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 550px; margin: 0 auto;">
+                    Has completado el límite de fotos de tu entrega. Puedes ver tus fotos guardadas abajo. Si necesitas cambiar alguna, haz clic en <strong>🗑️ Eliminar</strong> en la que desees reemplazar para liberar espacio.
+                </p>
+            </div>
+
+            <!-- Fotos Ya Subidas / Guardadas -->
+            <section id="uploaded-section" class="queue-section" style="display: none; margin-bottom: 2.5rem;">
+                <div class="queue-header">
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                        <h2>Fotos en tu Entrega</h2>
+                        <span id="uploaded-count-badge" style="color: var(--accent-cyan); font-size: 0.9rem; font-weight: 600;">(0 fotos)</span>
+                    </div>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">
+                        ✓ Guardadas en la nube. Haz clic para ver en grande o 🗑️ para cambiarla.
+                    </span>
+                </div>
+
+                <div id="uploaded-grid" class="queue-grid">
+                    <!-- Tarjetas de fotos ya subidas inyectadas por JS -->
+                </div>
+
+                <div id="uploaded-actions" style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                        ¿Listo con todas tus fotos? Si ya no necesitas hacer más cambios, puedes dar por terminada la entrega:
+                    </span>
+                    <button id="btn-finish-uploaded" class="btn btn-secondary btn-sm" style="border-color: rgba(16, 185, 129, 0.4); color: var(--accent-emerald);">
+                        ✓ Terminar entrega ahora
+                    </button>
+                </div>
+            </section>
+
             <!-- Cola y Previsualizaciones -->
             <section id="queue-section" class="queue-section" style="display: none;">
                 <div class="queue-header">

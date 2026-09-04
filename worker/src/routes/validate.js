@@ -4,7 +4,7 @@
 // ==========================================================
 
 import { jsonResponse, errorResponse } from '../utils/response.js';
-import { getLinkByToken, addLog } from '../services/db.js';
+import { getLinkByToken, addLog, getPhotosByLinkId } from '../services/db.js';
 
 export async function handleValidate(request, env, origin) {
     const url = new URL(request.url);
@@ -37,7 +37,7 @@ export async function handleValidate(request, env, origin) {
             }, 404, env, origin);
         }
 
-        // Si expiró o fue revocado o agotado
+        // 1. Estados que bloquean el acceso por completo
         if (link.status === 'expirado') {
             return jsonResponse({
                 valid: false,
@@ -55,37 +55,37 @@ export async function handleValidate(request, env, origin) {
             }, 200, env, origin);
         }
 
-        if (link.status === 'agotado' || link.uploaded_count >= link.max_photos) {
+        if (link.status === 'entregado') {
             return jsonResponse({
                 valid: false,
-                status: 'agotado',
-                message: 'Se ha alcanzado el límite máximo de fotos para este enlace.',
-                max_photos: link.max_photos,
-                uploaded_count: link.uploaded_count
+                status: 'entregado',
+                message: 'Este trabajo ya fue finalizado y entregado por el fotógrafo.',
             }, 200, env, origin);
         }
 
-        // Enlace activo y válido
+        // 2. Obtener fotos ya subidas previamente para este enlace
+        const photos = await getPhotosByLinkId(env.DB, link.id);
         const remainingPhotos = Math.max(0, link.max_photos - link.uploaded_count);
 
         await addLog(env.DB, {
             link_id: link.id,
             token: link.token,
             event_type: 'link_validado',
-            details: `Enlace validado con éxito. Restantes: ${remainingPhotos} fotos`,
+            details: `Enlace validado. Fotos ya subidas: ${photos.length}. Restantes: ${remainingPhotos}`,
             ip_address: ip,
             user_agent: userAgent
         });
 
         return jsonResponse({
             valid: true,
-            status: 'activo',
+            status: link.status,
             token: link.token,
             client_name: link.client_name || '',
             folder_name: link.folder_name || '',
             max_photos: link.max_photos,
             uploaded_count: link.uploaded_count,
             remaining_photos: remainingPhotos,
+            photos: photos || [],
             created_at: link.created_at,
             expires_at: link.expires_at,
             seconds_remaining: Math.max(0, link.seconds_remaining)

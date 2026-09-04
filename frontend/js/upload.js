@@ -17,6 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
+    const quotaExhaustedNotice = document.getElementById('quota-exhausted-notice');
+
+    const uploadedSection = document.getElementById('uploaded-section');
+    const uploadedGrid = document.getElementById('uploaded-grid');
+    const uploadedCountBadge = document.getElementById('uploaded-count-badge');
+    const btnFinishUploaded = document.getElementById('btn-finish-uploaded');
+
     const queueSection = document.getElementById('queue-section');
     const queueGrid = document.getElementById('queue-grid');
     const queueCount = document.getElementById('queue-count');
@@ -37,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('toast-container') || createToastContainer();
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `<span>${message}</span>`;
+        toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
         container.appendChild(toast);
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -54,11 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Formatear tamaño de archivo
     function formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
+        if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     // Iniciar Cuenta Regresiva
@@ -121,12 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok || !data.valid) {
                 if (data.status === 'expirado') {
                     showErrorCard('Enlace Expirado', 'Este enlace ha caducado por límite de tiempo. Solicita un nuevo enlace para continuar.', 'expired');
-                } else if (data.status === 'revision') {
-                    showErrorCard('En Revisión y Preparación', 'Las fotos de esta carpeta ya fueron recibidas y se encuentran en proceso de revisión y preparación.', 'exhausted');
                 } else if (data.status === 'entregado') {
                     showErrorCard('Trabajo Entregado', 'Este proyecto ya ha sido completado y entregado.', 'exhausted');
-                } else if (data.status === 'agotado') {
-                    showErrorCard('Cupo Completado', `Ya se ha alcanzado el límite máximo de ${data.max_photos || ''} fotos subidas para este enlace.`, 'exhausted');
                 } else if (data.status === 'revocado') {
                     showErrorCard('Enlace Revocado', 'Este enlace ha sido cancelado o revocado por el administrador.', 'error');
                 } else {
@@ -154,8 +164,17 @@ document.addEventListener('DOMContentLoaded', () => {
         statMax.textContent = linkData.max_photos;
         statUploaded.textContent = linkData.uploaded_count;
 
-        heroBadge.textContent = 'Activo';
-        heroBadge.className = 'badge badge-activo';
+        // Badge de estado dinámico
+        if (linkData.status === 'revision') {
+            heroBadge.textContent = 'En Revisión';
+            heroBadge.className = 'badge badge-revision';
+        } else if (linkData.status === 'entregado') {
+            heroBadge.textContent = 'Entregado';
+            heroBadge.className = 'badge badge-entregado';
+        } else {
+            heroBadge.textContent = 'Abierto';
+            heroBadge.className = 'badge badge-activo';
+        }
 
         if (linkData.seconds_remaining > 0) {
             startCountdown(linkData.seconds_remaining);
@@ -166,15 +185,140 @@ document.addEventListener('DOMContentLoaded', () => {
         if (linkData.client_name) {
             const subtitle = document.getElementById('upload-client-subtitle');
             if (subtitle) {
-                subtitle.innerHTML = `Hola <strong style="color: var(--accent-cyan);">${linkData.client_name}</strong>, selecciona o arrastra las fotos que deseas enviar.`;
+                subtitle.innerHTML = `Hola <strong style="color: var(--accent-cyan);">${escapeHtml(linkData.client_name)}</strong>, selecciona o arrastra las fotos que deseas enviar.`;
             }
             document.title = `Subida de Fotos — ${linkData.client_name}`;
         }
 
+        // Renderizar fotos ya subidas previamente
+        renderUploadedPhotos();
+
+        // Controlar visibilidad del dropzone y aviso de cupo
+        updateDropzoneState();
+
+        // Actualizar cola de subida
         updateQueueUI();
     }
 
-    // 3. Manejo de Drag & Drop y Selección
+    // 3. Control de Dropzone según cupo disponible
+    function updateDropzoneState() {
+        if (!dropzone) return;
+
+        if (linkData.remaining_photos <= 0) {
+            dropzone.style.display = 'none';
+            if (quotaExhaustedNotice) quotaExhaustedNotice.style.display = 'block';
+        } else {
+            dropzone.style.display = 'block';
+            if (quotaExhaustedNotice) quotaExhaustedNotice.style.display = 'none';
+        }
+    }
+
+    // 4. Renderizar fotos ya subidas a la nube (persistencia al recargar)
+    function renderUploadedPhotos() {
+        if (!uploadedSection || !uploadedGrid) return;
+
+        const photos = linkData.photos || [];
+
+        if (photos.length === 0) {
+            uploadedSection.style.display = 'none';
+            return;
+        }
+
+        uploadedSection.style.display = 'block';
+        if (uploadedCountBadge) {
+            uploadedCountBadge.textContent = `(${photos.length} ${photos.length === 1 ? 'foto' : 'fotos'})`;
+        }
+
+        uploadedGrid.innerHTML = '';
+        photos.forEach(photo => {
+            const card = document.createElement('div');
+            card.className = 'photo-card uploaded';
+            card.id = `uploaded-card-${photo.id}`;
+
+            const viewUrl = `${AppConfig.API_BASE_URL}/api/photos/view?key=${encodeURIComponent(photo.r2_key)}&token=${encodeURIComponent(currentToken)}`;
+
+            card.innerHTML = `
+                <div class="photo-thumb-wrap">
+                    <a href="${viewUrl}" target="_blank" title="Clic para ver en tamaño completo" style="display: block; width: 100%; height: 100%; cursor: zoom-in;">
+                        <img src="${viewUrl}" class="photo-thumb" alt="${escapeHtml(photo.filename)}" loading="lazy" />
+                    </a>
+                    <span class="photo-badge-status photo-badge-success">✓ Guardada</span>
+                    <button class="photo-remove-btn delete-photo-btn" title="Eliminar / Cambiar esta foto" data-id="${photo.id}" style="background: rgba(239, 68, 68, 0.9); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 2;">🗑️</button>
+                    <div class="photo-progress-bar">
+                        <div class="photo-progress-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="photo-info">
+                    <div class="photo-name" title="${escapeHtml(photo.filename)}">${escapeHtml(photo.filename)}</div>
+                    <div class="photo-meta">
+                        <span>${formatBytes(photo.file_size || photo.size_bytes || 0)}</span>
+                        <span style="color: var(--accent-emerald); font-size: 0.8rem; font-weight: 500;">En la nube</span>
+                    </div>
+                </div>
+            `;
+
+            const deleteBtn = card.querySelector('.delete-photo-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleClientDeletePhoto(photo);
+                });
+            }
+
+            uploadedGrid.appendChild(card);
+        });
+    }
+
+    // 5. Eliminar foto por parte del cliente (para liberar cupo y modificar)
+    async function handleClientDeletePhoto(photo) {
+        if (!confirm(`¿Estás seguro de que deseas eliminar "${photo.filename}"? Se liberará 1 espacio para que puedas subir otra foto.`)) {
+            return;
+        }
+
+        const cardEl = document.getElementById(`uploaded-card-${photo.id}`);
+        if (cardEl) {
+            cardEl.style.opacity = '0.4';
+            cardEl.style.pointerEvents = 'none';
+        }
+
+        try {
+            const res = await fetch(`${AppConfig.API_BASE_URL}/api/upload/photo/${photo.id}?token=${encodeURIComponent(currentToken)}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                showToast('Foto eliminada. Se liberó 1 espacio en tu cupo.', 'success');
+
+                // Actualizar estado local
+                linkData.photos = (linkData.photos || []).filter(p => p.id !== photo.id);
+                linkData.uploaded_count = data.uploaded_count;
+                linkData.remaining_photos = data.remaining_photos;
+
+                statUploaded.textContent = linkData.uploaded_count;
+                statRemaining.textContent = linkData.remaining_photos;
+
+                renderUploadedPhotos();
+                updateDropzoneState();
+            } else {
+                showToast(data.error || 'No se pudo eliminar la foto.', 'error');
+                if (cardEl) {
+                    cardEl.style.opacity = '1';
+                    cardEl.style.pointerEvents = 'auto';
+                }
+            }
+        } catch (err) {
+            console.error('Error al eliminar foto:', err);
+            showToast('Error de conexión al eliminar la foto.', 'error');
+            if (cardEl) {
+                cardEl.style.opacity = '1';
+                cardEl.style.pointerEvents = 'auto';
+            }
+        }
+    }
+
+    // 6. Manejo de Drag & Drop y Selección
     dropzone.addEventListener('click', () => {
         if (!isUploading) fileInput.click();
     });
@@ -213,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const remainingQuota = linkData.remaining_photos - fileQueue.filter(item => item.status !== 'error').length;
         if (remainingQuota <= 0) {
-            showToast(`Ya has alcanzado el cupo restante de ${linkData.remaining_photos} fotos.`, 'error');
+            showToast(`Ya has alcanzado el cupo disponible de ${linkData.remaining_photos} fotos.`, 'error');
             return;
         }
 
@@ -291,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="photo-thumb-wrap">
-                    <img src="${item.thumbUrl}" class="photo-thumb" alt="${item.file.name}" />
+                    <img src="${item.thumbUrl}" class="photo-thumb" alt="${escapeHtml(item.file.name)}" />
                     ${badgeHtml}
                     ${item.status === 'ready' && !isUploading ? `
                         <button class="photo-remove-btn" title="Quitar de la lista" data-id="${item.id}">✕</button>
@@ -301,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="photo-info">
-                    <div class="photo-name" title="${item.file.name}">${item.file.name}</div>
+                    <div class="photo-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</div>
                     <div class="photo-meta">
                         <span>${formatBytes(item.file.size)}</span>
                         <span class="status-text">${item.status === 'uploading' ? item.progress + '%' : ''}</span>
@@ -331,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateQueueUI();
     });
 
-    // 4. Subida secuencial de fotos
+    // 7. Subida secuencial de fotos
     btnUpload.addEventListener('click', async () => {
         const pendingItems = fileQueue.filter(i => i.status === 'ready');
         if (pendingItems.length === 0 || isUploading) return;
@@ -353,8 +497,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.status = 'success';
                     item.progress = 100;
                     successCount++;
+
                     linkData.uploaded_count = uploadResult.uploaded_count;
                     linkData.remaining_photos = uploadResult.remaining_photos;
+
+                    // Agregar la foto subida a la lista de persistencia
+                    if (uploadResult.photo) {
+                        if (!linkData.photos) linkData.photos = [];
+                        linkData.photos.unshift(uploadResult.photo);
+                    }
 
                     statUploaded.textContent = linkData.uploaded_count;
                     statRemaining.textContent = linkData.remaining_photos;
@@ -380,16 +531,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Limpiar de la cola los que se subieron con éxito para no duplicar vista
+        fileQueue = fileQueue.filter(item => item.status !== 'success');
+
         isUploading = false;
         btnUpload.innerHTML = 'Subir Fotos';
         updateQueueUI();
 
+        // Renderizar fotos en la nube y ajustar visibilidad del dropzone
+        renderUploadedPhotos();
+        updateDropzoneState();
+
         if (successCount > 0) {
             showToast(`¡${successCount} ${successCount === 1 ? 'foto subida' : 'fotos subidas'} con éxito!`, 'success');
-        }
-
-        if (linkData.remaining_photos <= 0) {
-            showExhaustedScreen();
         }
     });
 
@@ -437,9 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Botón Finalizar Entrega Manualmente
-    btnComplete.addEventListener('click', async () => {
-        if (!confirm('¿Deseas dar por terminada la entrega de fotos? Esta acción cerrará el enlace.')) {
+    // 8. Botón Finalizar Entrega Manualmente
+    async function completeUploadFlow() {
+        if (!confirm('¿Deseas dar por terminada la entrega de fotos? Esta acción cerrará la subida para que el fotógrafo proceda.')) {
             return;
         }
 
@@ -456,7 +610,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             showToast('Error de conexión', 'error');
         }
-    });
+    }
+
+    if (btnComplete) btnComplete.addEventListener('click', completeUploadFlow);
+    if (btnFinishUploaded) btnFinishUploaded.addEventListener('click', completeUploadFlow);
 
     function showExhaustedScreen(customMsg = null) {
         uploadContent.style.display = 'none';
