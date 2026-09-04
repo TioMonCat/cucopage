@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnLogout = document.getElementById('btn-logout');
 
     const kpiLinksTotal = document.getElementById('kpi-links-total');
-    const kpiLinksActive = document.getElementById('kpi-links-active');
-    const kpiPhotosTotal = document.getElementById('kpi-photos-total');
-    const kpiStorageTotal = document.getElementById('kpi-storage-total');
+    const kpiLinksOpen = document.getElementById('kpi-links-open');
+    const kpiLinksReview = document.getElementById('kpi-links-review');
+    const kpiLinksDelivered = document.getElementById('kpi-links-delivered');
 
     const searchInput = document.getElementById('search-input');
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -171,10 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (data.success) {
                 const m = data.metrics;
-                kpiLinksTotal.textContent = m.total_links || 0;
-                kpiLinksActive.textContent = m.active_links || 0;
-                kpiPhotosTotal.textContent = m.total_photos_uploaded || 0;
-                kpiStorageTotal.textContent = formatBytes(m.total_storage_bytes);
+                if (kpiLinksTotal) kpiLinksTotal.textContent = m.total_links || 0;
+                if (kpiLinksOpen) kpiLinksOpen.textContent = m.open_links || 0;
+                if (kpiLinksReview) kpiLinksReview.textContent = m.review_links || 0;
+                if (kpiLinksDelivered) kpiLinksDelivered.textContent = m.delivered_links || 0;
             }
         } catch (err) {
             console.error('Error cargando métricas:', err);
@@ -212,6 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getStatusClass(status) {
+        if (status === 'abierto' || status === 'activo') return 'status-abierto';
+        if (status === 'revision') return 'status-revision';
+        if (status === 'entregado') return 'status-entregado';
+        return 'status-custom';
+    }
+
     // 3. Renderizar Tabla de Enlaces
     function renderLinksTable(links) {
         linksTableBody.innerHTML = '';
@@ -220,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             const percent = Math.min(100, Math.round((link.uploaded_count / link.max_photos) * 100));
             const publicUrl = getPublicUploadUrl(link.token);
+            const isStandardStatus = ['abierto', 'activo', 'revision', 'entregado'].includes(link.status);
 
             // Formatear expiración
             const expiresDate = new Date(link.expires_at.replace(' ', 'T') + 'Z');
@@ -244,7 +252,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td>
-                    <span class="badge badge-${link.status}">${link.status}</span>
+                    <div class="status-select-wrap">
+                        <select class="status-select ${getStatusClass(link.status)}" data-id="${link.id}" data-current="${link.status}">
+                            <option value="abierto" ${link.status === 'abierto' || link.status === 'activo' ? 'selected' : ''}>🟢 Abierto</option>
+                            <option value="revision" ${link.status === 'revision' ? 'selected' : ''}>🟡 Revisión / Prep.</option>
+                            <option value="entregado" ${link.status === 'entregado' ? 'selected' : ''}>🟣 Entregado</option>
+                            ${!isStandardStatus ? `<option value="${link.status}" selected>🏷️ ${link.status.toUpperCase()}</option>` : ''}
+                            <option value="__custom__">✏️ Personalizar...</option>
+                        </select>
+                    </div>
                 </td>
                 <td>
                     <div>
@@ -263,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>
                     <div style="font-size: 0.85rem;">
                         <div>${formattedExpires}</div>
-                        ${link.status === 'activo' && link.seconds_remaining > 0 
+                        ${(link.status === 'abierto' || link.status === 'activo') && link.seconds_remaining > 0 
                             ? `<small style="color: var(--accent-cyan);">${Math.round(link.seconds_remaining / 3600)}h restantes</small>`
                             : ''}
                     </div>
@@ -273,11 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="icon-btn btn-view-photos" title="Ver fotos subidas" data-id="${link.id}" data-token="${link.token}" data-client="${link.client_name || ''}" data-folder="${link.folder_name || ''}">
                             🖼️
                         </button>
-                        ${link.status === 'activo' ? `
-                            <button class="icon-btn btn-revoke-link" title="Revocar enlace" data-id="${link.id}">
-                                🚫
-                            </button>
-                        ` : ''}
                         <button class="icon-btn icon-btn-danger btn-delete-link" title="Eliminar enlace y fotos" data-id="${link.id}">
                             🗑️
                         </button>
@@ -286,6 +297,45 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             linksTableBody.appendChild(tr);
+        });
+
+        // Eventos del Selector Interactivo de Estado
+        linksTableBody.querySelectorAll('.status-select').forEach(selectEl => {
+            selectEl.addEventListener('change', async () => {
+                const linkId = selectEl.dataset.id;
+                let targetStatus = selectEl.value;
+                const previousStatus = selectEl.dataset.current;
+
+                if (targetStatus === '__custom__') {
+                    const customName = prompt('Escribe el nuevo estado personalizado para esta carpeta (ej: "Edición Final", "Pendiente de Selección"):', '');
+                    if (!customName || !customName.trim()) {
+                        selectEl.value = previousStatus;
+                        return;
+                    }
+                    targetStatus = customName.trim();
+                }
+
+                try {
+                    const res = await fetch(`${AppConfig.API_BASE_URL}/api/admin/links/${linkId}/status`, {
+                        method: 'PATCH',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ status: targetStatus })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast(`Estado cambiado a "${targetStatus}"`, 'success');
+                        selectEl.dataset.current = targetStatus;
+                        selectEl.className = `status-select ${getStatusClass(targetStatus)}`;
+                        loadMetrics();
+                    } else {
+                        showToast(data.error || 'Error al actualizar estado', 'error');
+                        selectEl.value = previousStatus;
+                    }
+                } catch (err) {
+                    showToast('Error de conexión al cambiar estado', 'error');
+                    selectEl.value = previousStatus;
+                }
+            });
         });
 
         // Eventos de botones en filas

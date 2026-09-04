@@ -168,7 +168,7 @@ export async function handleCompleteUpload(request, env, origin) {
         return errorResponse('Enlace no encontrado.', 404, env, origin);
     }
 
-    await updateLinkStatus(env.DB, link.id, 'agotado');
+    await updateLinkStatus(env.DB, link.id, 'revision');
 
     const ip = request.headers.get('cf-connecting-ip') || '';
     const userAgent = request.headers.get('user-agent') || '';

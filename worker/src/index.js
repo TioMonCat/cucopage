@@ -12,6 +12,7 @@ import {
     handleAdminGetLinks,
     handleAdminCreateLink,
     handleAdminRevokeLink,
+    handleAdminUpdateStatus,
     handleAdminDeleteLink,
     handleAdminGetLinkPhotos,
     handleAdminDeletePhoto,
@@ -79,8 +80,8 @@ export default {
                 return await handleAdminCreateLink(request, env, origin);
             }
 
-            // Rutas dinámicas de enlaces admin: /api/admin/links/:id(/revoke|/photos)?
-            const linkRouteMatch = path.match(/^\/api\/admin\/links\/(\d+)(?:\/(revoke|photos))?$/);
+            // Rutas dinámicas de enlaces admin: /api/admin/links/:id(/revoke|/photos|/status)?
+            const linkRouteMatch = path.match(/^\/api\/admin\/links\/(\d+)(?:\/(revoke|photos|status))?$/);
             if (linkRouteMatch) {
                 const linkId = parseInt(linkRouteMatch[1], 10);
                 const subAction = linkRouteMatch[2];
@@ -90,6 +91,9 @@ export default {
                 }
                 if (subAction === 'revoke' && (method === 'PATCH' || method === 'POST')) {
                     return await handleAdminRevokeLink(request, env, origin, linkId);
+                }
+                if (subAction === 'status' && (method === 'PATCH' || method === 'POST')) {
+                    return await handleAdminUpdateStatus(request, env, origin, linkId);
                 }
                 if (subAction === 'photos' && method === 'GET') {
                     return await handleAdminGetLinkPhotos(request, env, origin, linkId);

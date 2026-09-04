@@ -18,8 +18,8 @@ export async function getLinkByToken(db, token) {
 
     if (!result) return null;
 
-    // Verificar si ya expiró por tiempo y aún figura como activo
-    if (result.status === 'activo' && result.seconds_remaining <= 0) {
+    // Verificar si ya expiró por tiempo y aún figura como abierto
+    if ((result.status === 'abierto' || result.status === 'activo') && result.seconds_remaining <= 0) {
         await db.prepare("UPDATE links SET status = 'expirado' WHERE id = ?").bind(result.id).run();
         result.status = 'expirado';
         result.seconds_remaining = 0;
@@ -37,7 +37,7 @@ export async function createLink(db, { token, client_name = '', folder_name = ''
 
     const insertQuery = `
         INSERT INTO links (token, client_name, folder_name, max_photos, uploaded_count, status, notes, created_at, expires_at)
-        VALUES (?, ?, ?, ?, 0, 'activo', ?, datetime('now'), datetime('now', '+' || ? || ' hours'))
+        VALUES (?, ?, ?, ?, 0, 'abierto', ?, datetime('now'), datetime('now', '+' || ? || ' hours'))
     `;
 
     const info = await db.prepare(insertQuery).bind(token, client_name, folder_name, maxPhotos, notes, hours).run();
@@ -52,7 +52,7 @@ export async function createLink(db, { token, client_name = '', folder_name = ''
 }
 
 /**
- * Incrementa atómicamente el contador de fotos subidas y actualiza el estado a 'agotado' si llega al límite.
+ * Incrementa atómicamente el contador de fotos subidas y actualiza el estado a 'revision' si llega al límite.
  */
 export async function incrementPhotoCount(db, linkId) {
     const link = await db.prepare("SELECT id, max_photos, uploaded_count, status FROM links WHERE id = ?").bind(linkId).first();
@@ -63,13 +63,16 @@ export async function incrementPhotoCount(db, linkId) {
     }
 
     const newCount = link.uploaded_count + 1;
-    const newStatus = newCount >= link.max_photos ? 'agotado' : link.status;
+    let newStatus = link.status;
+    if (newCount >= link.max_photos && (link.status === 'abierto' || link.status === 'activo')) {
+        newStatus = 'revision'; // Automáticamente pasa a Revisión/Preparación
+    }
 
     await db.prepare("UPDATE links SET uploaded_count = ?, status = ? WHERE id = ?")
         .bind(newCount, newStatus, linkId)
         .run();
 
-    return { success: true, uploaded_count: newCount, is_exhausted: newCount >= link.max_photos };
+    return { success: true, uploaded_count: newCount, is_exhausted: newCount >= link.max_photos, status: newStatus };
 }
 
 /**
@@ -81,8 +84,8 @@ export async function decrementPhotoCount(db, linkId) {
 
     const newCount = Math.max(0, link.uploaded_count - 1);
     let newStatus = link.status;
-    if (link.status === 'agotado' && newCount < link.max_photos) {
-        newStatus = 'activo';
+    if (link.status === 'revision' && newCount < link.max_photos) {
+        newStatus = 'abierto';
     }
 
     await db.prepare("UPDATE links SET uploaded_count = ?, status = ? WHERE id = ?")
@@ -191,15 +194,15 @@ export async function getLinks(db, { status = '', search = '', limit = 50, offse
  */
 export async function getDashboardMetrics(db) {
     // Actualizar expirados primero
-    await db.prepare("UPDATE links SET status = 'expirado' WHERE status = 'activo' AND datetime(expires_at) <= datetime('now')").run();
+    await db.prepare("UPDATE links SET status = 'expirado' WHERE status IN ('abierto', 'activo') AND datetime(expires_at) <= datetime('now')").run();
 
     const metricsQuery = `
         SELECT 
             COUNT(*) AS total_links,
-            SUM(CASE WHEN status = 'activo' THEN 1 ELSE 0 END) AS active_links,
-            SUM(CASE WHEN status = 'agotado' THEN 1 ELSE 0 END) AS exhausted_links,
+            SUM(CASE WHEN status IN ('abierto', 'activo') THEN 1 ELSE 0 END) AS open_links,
+            SUM(CASE WHEN status = 'revision' THEN 1 ELSE 0 END) AS review_links,
+            SUM(CASE WHEN status = 'entregado' THEN 1 ELSE 0 END) AS delivered_links,
             SUM(CASE WHEN status = 'expirado' THEN 1 ELSE 0 END) AS expired_links,
-            SUM(CASE WHEN status = 'revocado' THEN 1 ELSE 0 END) AS revoked_links,
             COALESCE(SUM(uploaded_count), 0) AS total_photos_uploaded
         FROM links
     `;
@@ -215,10 +218,10 @@ export async function getDashboardMetrics(db) {
 
     return {
         total_links: metrics?.total_links || 0,
-        active_links: metrics?.active_links || 0,
-        exhausted_links: metrics?.exhausted_links || 0,
+        open_links: metrics?.open_links || 0,
+        review_links: metrics?.review_links || 0,
+        delivered_links: metrics?.delivered_links || 0,
         expired_links: metrics?.expired_links || 0,
-        revoked_links: metrics?.revoked_links || 0,
         total_photos_uploaded: metrics?.total_photos_uploaded || 0,
         total_stored_photos: storage?.total_stored_photos || 0,
         total_storage_bytes: storage?.total_storage_bytes || 0

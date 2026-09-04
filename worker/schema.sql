@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS links (
     token TEXT UNIQUE NOT NULL,
     max_photos INTEGER NOT NULL DEFAULT 10,
     uploaded_count INTEGER NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'activo' CHECK(status IN ('activo', 'agotado', 'expirado', 'revocado')),
+    status TEXT NOT NULL DEFAULT 'abierto',
     client_name TEXT NOT NULL DEFAULT '',
     folder_name TEXT NOT NULL DEFAULT '',
     notes TEXT DEFAULT '',

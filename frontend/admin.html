@@ -57,34 +57,34 @@
         <!-- Tarjetas KPI -->
         <section class="kpi-grid">
             <div class="glass-card kpi-card">
-                <div class="kpi-icon kpi-icon-links">🔗</div>
+                <div class="kpi-icon kpi-icon-links">📁</div>
                 <div class="kpi-details">
                     <span id="kpi-links-total" class="kpi-value">0</span>
-                    <span class="kpi-label">Enlaces Totales</span>
+                    <span class="kpi-label">Carpetas Totales</span>
                 </div>
             </div>
 
             <div class="glass-card kpi-card">
-                <div class="kpi-icon kpi-icon-active">⚡</div>
+                <div class="kpi-icon kpi-icon-active">🟢</div>
                 <div class="kpi-details">
-                    <span id="kpi-links-active" class="kpi-value">0</span>
-                    <span class="kpi-label">Enlaces Activos</span>
+                    <span id="kpi-links-open" class="kpi-value">0</span>
+                    <span class="kpi-label">Abiertos / Subiendo</span>
                 </div>
             </div>
 
             <div class="glass-card kpi-card">
-                <div class="kpi-icon kpi-icon-photos">📷</div>
+                <div class="kpi-icon kpi-icon-photos" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">🟡</div>
                 <div class="kpi-details">
-                    <span id="kpi-photos-total" class="kpi-value">0</span>
-                    <span class="kpi-label">Fotos Recibidas</span>
+                    <span id="kpi-links-review" class="kpi-value">0</span>
+                    <span class="kpi-label">En Revisión / Prep.</span>
                 </div>
             </div>
 
             <div class="glass-card kpi-card">
-                <div class="kpi-icon kpi-icon-storage">💾</div>
+                <div class="kpi-icon kpi-icon-storage" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-violet);">🟣</div>
                 <div class="kpi-details">
-                    <span id="kpi-storage-total" class="kpi-value">0 MB</span>
-                    <span class="kpi-label">Espacio en R2</span>
+                    <span id="kpi-links-delivered" class="kpi-value">0</span>
+                    <span class="kpi-label">Entregados</span>
                 </div>
             </div>
         </section>
@@ -93,10 +93,9 @@
         <div class="dashboard-controls">
             <div class="filter-tabs">
                 <button class="tab-btn active" data-status="">Todos</button>
-                <button class="tab-btn" data-status="activo">Activos</button>
-                <button class="tab-btn" data-status="agotado">Agotados</button>
-                <button class="tab-btn" data-status="expirado">Expirados</button>
-                <button class="tab-btn" data-status="revocado">Revocados</button>
+                <button class="tab-btn" data-status="abierto">🟢 Abiertos</button>
+                <button class="tab-btn" data-status="revision">🟡 Revisión / Prep.</button>
+                <button class="tab-btn" data-status="entregado">🟣 Entregados</button>
             </div>
 
             <div class="search-box">

@@ -162,6 +162,38 @@ export async function handleAdminRevokeLink(request, env, origin, linkId) {
 }
 
 /**
+ * Actualiza el estado de un enlace/carpeta (abierto, revision, entregado o personalizado).
+ */
+export async function handleAdminUpdateStatus(request, env, origin, linkId) {
+    if (!isAuthorizedAdmin(request, env)) {
+        return errorResponse('No autorizado.', 401, env, origin);
+    }
+
+    try {
+        const body = await request.json();
+        const newStatus = (body.status || '').trim().toLowerCase();
+
+        if (!newStatus) {
+            return errorResponse('El nuevo estado es requerido.', 400, env, origin);
+        }
+
+        await updateLinkStatus(env.DB, linkId, newStatus);
+
+        const ip = request.headers.get('cf-connecting-ip') || '';
+        await addLog(env.DB, {
+            link_id: linkId,
+            event_type: 'estado_cambiado',
+            details: `Estado del enlace ${linkId} actualizado a "${newStatus}" por el administrador`,
+            ip_address: ip
+        });
+
+        return jsonResponse({ success: true, status: newStatus, message: 'Estado actualizado con éxito' }, 200, env, origin);
+    } catch (err) {
+        return errorResponse('Error al actualizar estado.', 500, env, origin, err.message);
+    }
+}
+
+/**
  * Elimina un enlace y todas sus fotos asociadas en R2 y D1.
  */
 export async function handleAdminDeleteLink(request, env, origin, linkId) {

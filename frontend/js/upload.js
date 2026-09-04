@@ -120,7 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!res.ok || !data.valid) {
                 if (data.status === 'expirado') {
-                    showErrorCard('Enlace Expirado', 'Este enlace ha caducado por límite de tiempo (24h). Solicita un nuevo enlace para continuar.', 'expired');
+                    showErrorCard('Enlace Expirado', 'Este enlace ha caducado por límite de tiempo. Solicita un nuevo enlace para continuar.', 'expired');
+                } else if (data.status === 'revision') {
+                    showErrorCard('En Revisión y Preparación', 'Las fotos de esta carpeta ya fueron recibidas y se encuentran en proceso de revisión y preparación.', 'exhausted');
+                } else if (data.status === 'entregado') {
+                    showErrorCard('Trabajo Entregado', 'Este proyecto ya ha sido completado y entregado.', 'exhausted');
                 } else if (data.status === 'agotado') {
                     showErrorCard('Cupo Completado', `Ya se ha alcanzado el límite máximo de ${data.max_photos || ''} fotos subidas para este enlace.`, 'exhausted');
                 } else if (data.status === 'revocado') {

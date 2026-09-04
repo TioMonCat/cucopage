@@ -181,10 +181,28 @@ a:hover {
     text-transform: uppercase;
 }
 
-.badge-activo {
+.badge-abierto, .badge-activo {
     background-color: var(--success-bg);
     color: var(--success);
     border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badge-revision {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-entregado {
+    background-color: rgba(168, 85, 247, 0.15);
+    color: var(--accent-violet);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.badge-custom {
+    background-color: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(6, 182, 212, 0.3);
 }
 
 .badge-agotado {
