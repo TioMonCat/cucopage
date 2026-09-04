@@ -80,13 +80,16 @@ export async function handleUpload(request, env, origin) {
     const cleanFilename = sanitizeFilename(file.name);
     const mimeType = magicCheck.detectedMime || file.type || 'image/jpeg';
     const fileUuid = crypto.randomUUID();
-    const r2Key = `uploads/${token}/${fileUuid}_${cleanFilename}`;
+    const folder = link.folder_name || token;
+    const r2Key = `uploads/${folder}/${fileUuid}_${cleanFilename}`;
 
     try {
         // 5. Guardar en Cloudflare R2
         await savePhotoToR2(env.PHOTOS_BUCKET, r2Key, arrayBuffer, mimeType, {
             originalName: cleanFilename,
             token: token,
+            clientName: link.client_name || '',
+            folderName: folder,
             linkId: String(link.id)
         });
 

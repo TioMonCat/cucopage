@@ -81,6 +81,8 @@ export async function handleValidate(request, env, origin) {
             valid: true,
             status: 'activo',
             token: link.token,
+            client_name: link.client_name || '',
+            folder_name: link.folder_name || '',
             max_photos: link.max_photos,
             uploaded_count: link.uploaded_count,
             remaining_photos: remainingPhotos,

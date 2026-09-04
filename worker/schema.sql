@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS links (
     max_photos INTEGER NOT NULL DEFAULT 10,
     uploaded_count INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'activo' CHECK(status IN ('activo', 'agotado', 'expirado', 'revocado')),
+    client_name TEXT NOT NULL DEFAULT '',
+    folder_name TEXT NOT NULL DEFAULT '',
     notes TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at TEXT NOT NULL

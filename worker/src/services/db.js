@@ -9,7 +9,7 @@ export async function getLinkByToken(db, token) {
     if (!token) return null;
 
     const query = `
-        SELECT id, token, max_photos, uploaded_count, status, notes, created_at, expires_at,
+        SELECT id, token, client_name, folder_name, max_photos, uploaded_count, status, notes, created_at, expires_at,
                (strftime('%s', expires_at) - strftime('%s', 'now')) AS seconds_remaining
         FROM links
         WHERE token = ?
@@ -31,19 +31,19 @@ export async function getLinkByToken(db, token) {
 /**
  * Crea un nuevo enlace temporal.
  */
-export async function createLink(db, { token, max_photos = 10, expires_in_hours = 24, notes = '' }) {
+export async function createLink(db, { token, client_name = '', folder_name = '', max_photos = 10, expires_in_hours = 24, notes = '' }) {
     const hours = Math.max(1, Math.min(168, parseInt(expires_in_hours, 10) || 24)); // Entre 1h y 7 días
     const maxPhotos = Math.max(1, Math.min(20, parseInt(max_photos, 10) || 10)); // Entre 1 y 20 fotos
 
     const insertQuery = `
-        INSERT INTO links (token, max_photos, uploaded_count, status, notes, created_at, expires_at)
-        VALUES (?, ?, 0, 'activo', ?, datetime('now'), datetime('now', '+' || ? || ' hours'))
+        INSERT INTO links (token, client_name, folder_name, max_photos, uploaded_count, status, notes, created_at, expires_at)
+        VALUES (?, ?, ?, ?, 0, 'activo', ?, datetime('now'), datetime('now', '+' || ? || ' hours'))
     `;
 
-    const info = await db.prepare(insertQuery).bind(token, maxPhotos, notes, hours).run();
+    const info = await db.prepare(insertQuery).bind(token, client_name, folder_name, maxPhotos, notes, hours).run();
 
     const created = await db.prepare(`
-        SELECT id, token, max_photos, uploaded_count, status, notes, created_at, expires_at,
+        SELECT id, token, client_name, folder_name, max_photos, uploaded_count, status, notes, created_at, expires_at,
                (strftime('%s', expires_at) - strftime('%s', 'now')) AS seconds_remaining
         FROM links WHERE id = ?
     `).bind(info.meta.last_row_id).first();
@@ -165,8 +165,8 @@ export async function getLinks(db, { status = '', search = '', limit = 50, offse
     }
 
     if (search) {
-        whereClause += " AND (token LIKE ? OR notes LIKE ?)";
-        params.push(`%${search}%`, `%${search}%`);
+        whereClause += " AND (token LIKE ? OR client_name LIKE ? OR notes LIKE ?)";
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const countQuery = `SELECT COUNT(*) as total FROM links ${whereClause}`;
@@ -174,7 +174,7 @@ export async function getLinks(db, { status = '', search = '', limit = 50, offse
     const total = countResult ? countResult.total : 0;
 
     const selectQuery = `
-        SELECT id, token, max_photos, uploaded_count, status, notes, created_at, expires_at,
+        SELECT id, token, client_name, folder_name, max_photos, uploaded_count, status, notes, created_at, expires_at,
                (strftime('%s', expires_at) - strftime('%s', 'now')) AS seconds_remaining
         FROM links
         ${whereClause}

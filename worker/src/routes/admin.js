@@ -19,7 +19,7 @@ import {
     addLog
 } from '../services/db.js';
 import { deleteFolderFromR2, deletePhotoFromR2 } from '../services/storage.js';
-import { generateSecureToken } from '../utils/validation.js';
+import { generateSecureToken, slugifyClientName } from '../utils/validation.js';
 
 /**
  * Autenticación simple para el login del Admin Dashboard.
@@ -94,7 +94,11 @@ export async function handleAdminCreateLink(request, env, origin) {
     }
 
     try {
-        const body = await request.json();
+        const clientName = (body.client_name || '').trim();
+        if (!clientName) {
+            return errorResponse('El nombre de la persona o cliente es obligatorio.', 400, env, origin);
+        }
+
         const maxPhotos = parseInt(body.max_photos, 10) || 10;
         const expiresInHours = parseInt(body.expires_in_hours, 10) || parseInt(env.DEFAULT_EXPIRATION_HOURS, 10) || 24;
         const notes = (body.notes || '').trim();
@@ -104,8 +108,13 @@ export async function handleAdminCreateLink(request, env, origin) {
         }
 
         const token = generateSecureToken();
+        const slug = slugifyClientName(clientName);
+        const folderName = `${slug}_${token.substring(0, 8)}`;
+
         const link = await createLink(env.DB, {
             token,
+            client_name: clientName,
+            folder_name: folderName,
             max_photos: maxPhotos,
             expires_in_hours: expiresInHours,
             notes
@@ -116,7 +125,7 @@ export async function handleAdminCreateLink(request, env, origin) {
             link_id: link.id,
             token: link.token,
             event_type: 'link_creado',
-            details: `Enlace generado para ${maxPhotos} fotos con vencimiento en ${expiresInHours}h. Notas: "${notes}"`,
+            details: `Enlace generado para ${clientName} (Carpeta: ${folderName}) con ${maxPhotos} fotos y validez de ${expiresInHours}h. Notas: "${notes}"`,
             ip_address: ip
         });
 
@@ -160,10 +169,10 @@ export async function handleAdminDeleteLink(request, env, origin, linkId) {
     }
 
     try {
-        // Obtener el token del enlace para limpiar la carpeta en R2
-        const link = await env.DB.prepare("SELECT token FROM links WHERE id = ?").bind(linkId).first();
-        if (link && link.token) {
-            await deleteFolderFromR2(env.PHOTOS_BUCKET, `uploads/${link.token}/`);
+        const link = await env.DB.prepare("SELECT token, folder_name FROM links WHERE id = ?").bind(linkId).first();
+        if (link) {
+            const folder = link.folder_name || link.token;
+            await deleteFolderFromR2(env.PHOTOS_BUCKET, `uploads/${folder}/`);
         }
 
         await deleteLink(env.DB, linkId);

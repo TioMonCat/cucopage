@@ -159,6 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
             countdownTimer.textContent = 'Tiempo por expirar';
         }
 
+        if (linkData.client_name) {
+            const subtitle = document.getElementById('upload-client-subtitle');
+            if (subtitle) {
+                subtitle.innerHTML = `Hola <strong style="color: var(--accent-cyan);">${linkData.client_name}</strong>, selecciona o arrastra las fotos que deseas enviar.`;
+            }
+            document.title = `Subida de Fotos — ${linkData.client_name}`;
+        }
+
         updateQueueUI();
     }
 

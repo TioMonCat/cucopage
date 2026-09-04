@@ -26,10 +26,13 @@ export async function handlePhotoServe(request, env, origin, isDownload = false)
     }
 
     // 2. ¿El key corresponde al token proporcionado y el token es válido?
-    if (!isAuthorized && token && key.startsWith(`uploads/${token}/`)) {
+    if (!isAuthorized && token) {
         const link = await getLinkByToken(env.DB, token);
         if (link) {
-            isAuthorized = true;
+            const folder = link.folder_name || link.token;
+            if (key.startsWith(`uploads/${folder}/`) || key.startsWith(`uploads/${token}/`)) {
+                isAuthorized = true;
+            }
         }
     }
 

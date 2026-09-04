@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createForm = document.getElementById('create-form');
     const inputMaxPhotos = document.getElementById('create-max-photos');
     const selectExpires = document.getElementById('create-expires');
+    const inputClientName = document.getElementById('create-client-name');
     const inputNotes = document.getElementById('create-notes');
     const generatedBox = document.getElementById('generated-box');
     const generatedUrlInput = document.getElementById('generated-url');
@@ -226,8 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tr.innerHTML = `
                 <td>
+                    <div style="font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.45rem;">
+                        <span style="font-size: 1.05rem;">📁</span>
+                        <span>${link.client_name || 'Sin nombre'}</span>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; font-family: monospace; display: block; margin-top: 2px;">
+                        uploads/${link.folder_name || link.token}
+                    </small>
+                </td>
+                <td>
                     <div class="token-cell">
-                        <span>${link.token.substring(0, 12)}...</span>
+                        <span>${link.token.substring(0, 10)}...</span>
                         <button class="copy-btn" title="Copiar link de subida" data-url="${publicUrl}">
                             📋
                         </button>
@@ -247,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
                 <td>
                     <span style="font-size: 0.85rem;" title="${link.notes || 'Sin notas'}">
-                        ${link.notes ? (link.notes.length > 25 ? link.notes.substring(0, 25) + '...' : link.notes) : '—'}
+                        ${link.notes ? (link.notes.length > 20 ? link.notes.substring(0, 20) + '...' : link.notes) : '—'}
                     </span>
                 </td>
                 <td>
@@ -260,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="icon-btn btn-view-photos" title="Ver fotos subidas" data-id="${link.id}" data-token="${link.token}">
+                        <button class="icon-btn btn-view-photos" title="Ver fotos subidas" data-id="${link.id}" data-token="${link.token}" data-client="${link.client_name || ''}" data-folder="${link.folder_name || ''}">
                             🖼️
                         </button>
                         ${link.status === 'activo' ? `
@@ -290,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         linksTableBody.querySelectorAll('.btn-view-photos').forEach(btn => {
             btn.addEventListener('click', () => {
-                openGalleryModal(btn.dataset.id, btn.dataset.token);
+                openGalleryModal(btn.dataset.id, btn.dataset.token, btn.dataset.client, btn.dataset.folder);
             });
         });
 
@@ -328,14 +338,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Crear Nuevo Enlace
     btnOpenCreate.addEventListener('click', () => {
         generatedBox.style.display = 'none';
+        if (inputClientName) inputClientName.value = '';
         inputNotes.value = '';
         inputMaxPhotos.value = '10';
         selectExpires.value = '24';
         createModal.classList.add('active');
+        if (inputClientName) inputClientName.focus();
     });
 
     createForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const clientName = inputClientName ? inputClientName.value.trim() : '';
+        if (!clientName) {
+            showToast('Por favor escribe el nombre de la persona o cliente', 'error');
+            if (inputClientName) inputClientName.focus();
+            return;
+        }
+
         const maxPhotos = parseInt(inputMaxPhotos.value, 10) || 10;
         const expiresInHours = parseInt(selectExpires.value, 10) || 24;
         const notes = inputNotes.value.trim();
@@ -345,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
+                    client_name: clientName,
                     max_photos: maxPhotos,
                     expires_in_hours: expiresInHours,
                     notes
@@ -356,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullUrl = getPublicUploadUrl(data.link.token);
                 generatedUrlInput.value = fullUrl;
                 generatedBox.style.display = 'block';
-                showToast('¡Enlace generado exitosamente!', 'success');
+                showToast(`¡Enlace y carpeta creada para "${clientName}"!`, 'success');
                 loadDashboardData();
             } else {
                 showToast(data.error || 'Error al generar enlace', 'error');
@@ -414,10 +434,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 7. Modal de Galería de Fotos
-    async function openGalleryModal(linkId, token) {
+    async function openGalleryModal(linkId, token, clientName = '', folderName = '') {
         activeLinkIdForGallery = linkId;
-        galleryTitle.textContent = `Fotos del Enlace`;
-        gallerySubtitle.textContent = `Token: ${token.substring(0, 16)}...`;
+        galleryTitle.textContent = clientName ? `Fotos de: ${clientName}` : 'Fotos del Enlace';
+        gallerySubtitle.textContent = `📁 Carpeta: uploads/${folderName || token} (Token: ${token.substring(0, 8)}...)`;
         galleryGrid.innerHTML = '<div class="spinner" style="margin: 2rem auto;"></div>';
         galleryEmpty.style.display = 'none';
         galleryModal.classList.add('active');

@@ -125,3 +125,19 @@ export function generateSecureToken() {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 }
+
+/**
+ * Convierte el nombre de un cliente en un slug seguro para nombres de carpetas en R2.
+ */
+export function slugifyClientName(name) {
+    if (!name || typeof name !== 'string') return 'cliente';
+    const slug = name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+        .replace(/[^a-zA-Z0-9_\-\s]/g, '') // Caracteres alfanuméricos
+        .trim()
+        .replace(/\s+/g, '_')
+        .toLowerCase()
+        .substring(0, 50);
+    return slug || 'cliente';
+}

@@ -110,6 +110,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Cliente / Carpeta</th>
                         <th>Token</th>
                         <th>Estado</th>
                         <th>Fotos Subidas</th>
@@ -170,6 +171,14 @@
             </div>
             
             <form id="create-form">
+                <div class="form-group">
+                    <label class="form-label" for="create-client-name">Nombre de la Persona / Cliente *</label>
+                    <input type="text" id="create-client-name" class="form-control" placeholder="Ej: Juan Pérez o Boda Carlos y Ana" required autofocus>
+                    <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.25rem;">
+                        📁 Se creará automáticamente una carpeta en R2 con este nombre para organizar sus fotos.
+                    </small>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label" for="create-max-photos">Cantidad Máxima de Fotos (1 a 20)</label>
                     <input type="number" id="create-max-photos" class="form-control" min="1" max="20" value="10" required>
