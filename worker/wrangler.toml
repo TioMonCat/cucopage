@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "photo-db"
-database_id = "your-d1-database-id-here" # Configurar con el ID generado por `wrangler d1 create photo-db`
+database_id = "dbfa3240-4c93-47fe-b28e-dc1c32e1d36d"
 
 # Bucket de almacenamiento Cloudflare R2
 [[r2_buckets]]

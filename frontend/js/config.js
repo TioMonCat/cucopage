@@ -20,7 +20,7 @@ const AppConfig = {
         
         return isLocal 
             ? 'http://localhost:8787' 
-            : 'https://photo-upload-worker.tu-usuario.workers.dev';
+            : 'https://photo-upload-worker.jaminecraft844.workers.dev';
     })(),
 
     // Tamaño máximo por foto en Megabytes
