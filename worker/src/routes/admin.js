@@ -94,6 +94,7 @@ export async function handleAdminCreateLink(request, env, origin) {
     }
 
     try {
+        const body = await request.json();
         const clientName = (body.client_name || '').trim();
         if (!clientName) {
             return errorResponse('El nombre de la persona o cliente es obligatorio.', 400, env, origin);
