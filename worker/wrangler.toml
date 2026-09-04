@@ -1,0 +1,21 @@
+name = "photo-upload-worker"
+main = "src/index.js"
+compatibility_date = "2024-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Base de datos D1 (SQLite en el Edge)
+[[d1_databases]]
+binding = "DB"
+database_name = "photo-db"
+database_id = "your-d1-database-id-here" # Configurar con el ID generado por `wrangler d1 create photo-db`
+
+# Bucket de almacenamiento Cloudflare R2
+[[r2_buckets]]
+binding = "PHOTOS_BUCKET"
+bucket_name = "photo-uploads"
+
+# Variables de entorno públicas
+[vars]
+CORS_ALLOWED_ORIGIN = "*" # Configurar al dominio de GitHub Pages en producción (ej: https://usuario.github.io)
+MAX_FILE_SIZE_MB = "25"
+DEFAULT_EXPIRATION_HOURS = "24"

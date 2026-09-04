@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración — Subida de Fotos</title>
+    <meta name="description" content="Dashboard privado de administración para gestionar links de subida, fotos y auditoría.">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+    <!-- Encabezado del Dashboard -->
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                </div>
+                <span class="brand-name">Admin Dashboard</span>
+            </a>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="upload.html" target="_blank" class="btn btn-secondary btn-sm" title="Abrir página de subida">
+                    Abrir Subida ↗
+                </a>
+                <button id="btn-logout" class="btn btn-secondary btn-sm">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container admin-wrapper">
+
+        <!-- Barra Superior con Acciones Principales -->
+        <div class="admin-topbar">
+            <div>
+                <h1 style="font-size: 1.85rem; margin-bottom: 0.35rem;">Control de Enlaces</h1>
+                <p>Genera y administra links temporales de subida de fotos para tus clientes.</p>
+            </div>
+
+            <div class="topbar-actions">
+                <button id="btn-open-logs" class="btn btn-secondary">
+                    📜 Ver Logs
+                </button>
+                <button id="btn-open-create" class="btn btn-primary">
+                    + Generar Enlace
+                </button>
+            </div>
+        </div>
+
+        <!-- Tarjetas KPI -->
+        <section class="kpi-grid">
+            <div class="glass-card kpi-card">
+                <div class="kpi-icon kpi-icon-links">🔗</div>
+                <div class="kpi-details">
+                    <span id="kpi-links-total" class="kpi-value">0</span>
+                    <span class="kpi-label">Enlaces Totales</span>
+                </div>
+            </div>
+
+            <div class="glass-card kpi-card">
+                <div class="kpi-icon kpi-icon-active">⚡</div>
+                <div class="kpi-details">
+                    <span id="kpi-links-active" class="kpi-value">0</span>
+                    <span class="kpi-label">Enlaces Activos</span>
+                </div>
+            </div>
+
+            <div class="glass-card kpi-card">
+                <div class="kpi-icon kpi-icon-photos">📷</div>
+                <div class="kpi-details">
+                    <span id="kpi-photos-total" class="kpi-value">0</span>
+                    <span class="kpi-label">Fotos Recibidas</span>
+                </div>
+            </div>
+
+            <div class="glass-card kpi-card">
+                <div class="kpi-icon kpi-icon-storage">💾</div>
+                <div class="kpi-details">
+                    <span id="kpi-storage-total" class="kpi-value">0 MB</span>
+                    <span class="kpi-label">Espacio en R2</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtros y Barra de Búsqueda -->
+        <div class="dashboard-controls">
+            <div class="filter-tabs">
+                <button class="tab-btn active" data-status="">Todos</button>
+                <button class="tab-btn" data-status="activo">Activos</button>
+                <button class="tab-btn" data-status="agotado">Agotados</button>
+                <button class="tab-btn" data-status="expirado">Expirados</button>
+                <button class="tab-btn" data-status="revocado">Revocados</button>
+            </div>
+
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="form-control" placeholder="Buscar por token o nota...">
+            </div>
+        </div>
+
+        <!-- Tabla de Enlaces -->
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Token</th>
+                        <th>Estado</th>
+                        <th>Fotos Subidas</th>
+                        <th>Notas</th>
+                        <th>Vencimiento</th>
+                        <th style="text-align: right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="links-table-body">
+                    <!-- Filas inyectadas por JS -->
+                </tbody>
+            </table>
+
+            <!-- Loader de la tabla -->
+            <div id="table-loading" style="padding: 3rem 0; text-align: center;">
+                <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Cargando enlaces...</p>
+            </div>
+
+            <!-- Estado Vacío -->
+            <div id="empty-state" style="display: none; padding: 4rem 2rem; text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">📂</div>
+                <h3>No se encontraron enlaces</h3>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Crea un nuevo enlace con el botón "+ Generar Enlace".</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Login de Administrador -->
+    <div id="login-modal" class="modal-backdrop login-modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Acceso de Administrador</h2>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                Ingresa la contraseña maestra configurada en el backend para gestionar el sistema.
+            </p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Contraseña Maestra</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••••••" required autofocus>
+                </div>
+                <div id="login-error" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Ingresar al Panel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Generar Nuevo Enlace -->
+    <div id="create-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Generar Nuevo Enlace</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            
+            <form id="create-form">
+                <div class="form-group">
+                    <label class="form-label" for="create-max-photos">Cantidad Máxima de Fotos (1 a 20)</label>
+                    <input type="number" id="create-max-photos" class="form-control" min="1" max="20" value="10" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="create-expires">Tiempo de Validez</label>
+                    <select id="create-expires" class="form-control">
+                        <option value="12">12 horas</option>
+                        <option value="24" selected>24 horas (Recomendado)</option>
+                        <option value="48">48 horas (2 días)</option>
+                        <option value="168">7 días</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="create-notes">Notas / Referencia del Cliente</label>
+                    <input type="text" id="create-notes" class="form-control" placeholder="Ej: Fotos Sesión Boda Carlos y Ana">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    Crear Enlace Único
+                </button>
+            </form>
+
+            <!-- Caja con el Link Generado -->
+            <div id="generated-box" class="generated-box" style="display: none;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">
+                    ✓ Enlace generado listo para compartir:
+                </span>
+                <div class="generated-url-input">
+                    <input type="text" id="generated-url" class="form-control" readonly style="font-family: monospace; font-size: 0.85rem;">
+                    <button id="btn-copy-generated" class="btn btn-secondary">Copiar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Galería de Fotos del Enlace -->
+    <div id="gallery-modal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 750px;">
+            <div class="modal-header">
+                <div>
+                    <h2 id="gallery-title" class="modal-title">Fotos del Enlace</h2>
+                    <p id="gallery-subtitle" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+                </div>
+                <button class="modal-close">&times;</button>
+            </div>
+
+            <div id="gallery-grid" class="gallery-grid">
+                <!-- Fotos inyectadas por JS -->
+            </div>
+
+            <div id="gallery-empty" style="display: none; padding: 3rem 1rem; text-align: center;">
+                <p style="color: var(--text-muted);">Aún no se han subido fotos para este enlace.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Auditoría de Logs -->
+    <div id="logs-modal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Registro de Auditoría y Eventos</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Trazabilidad de links generados, subidas y accesos.</p>
+                </div>
+                <button class="modal-close">&times;</button>
+            </div>
+
+            <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Evento</th>
+                            <th>Token</th>
+                            <th>Detalle</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body">
+                        <!-- Filas inyectadas por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container"></div>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Dashboard de Administración — Cloudflare Worker + D1 + R2</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

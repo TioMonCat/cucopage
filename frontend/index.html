@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Entrega y Subida de Fotos</title>
+    <meta name="description" content="Plataforma de entrega segura de fotografías con enlaces temporales y control de cuota.">
+    <link rel="stylesheet" href="css/base.css">
+    <style>
+        .portal-hero {
+            padding: 5rem 1rem 3rem;
+            text-align: center;
+        }
+
+        .portal-title {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 30%, var(--primary) 70%, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .portal-subtitle {
+            font-size: 1.15rem;
+            max-width: 620px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.6;
+        }
+
+        .token-box-card {
+            max-width: 500px;
+            margin: 0 auto 3.5rem;
+            padding: 2rem;
+            text-align: left;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature-card {
+            padding: 1.75rem;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <span class="brand-name">FotoDrop</span>
+            </a>
+
+            <div>
+                <a href="admin.html" class="btn btn-secondary btn-sm">
+                    Panel de Admin 🔒
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <section class="portal-hero">
+            <h1 class="portal-title">Entrega de Fotografías Segura y Rápida</h1>
+            <p class="portal-subtitle">
+                Sube tus fotos en alta calidad directamente a la nube privada mediante un enlace único y temporal proporcionado por el fotógrafo.
+            </p>
+
+            <!-- Acceso Directo por Token -->
+            <div class="glass-card token-box-card">
+                <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">¿Tenés un código o enlace de subida?</h3>
+                <p style="font-size: 0.85rem; margin-bottom: 1.25rem;">
+                    Si recibiste un token o enlace directo, pegalo a continuación para ingresar a la sala de carga:
+                </p>
+
+                <form id="token-form" style="display: flex; gap: 0.75rem;">
+                    <input type="text" id="input-token" class="form-control" placeholder="Pegá tu token o URL aquí..." required>
+                    <button type="submit" class="btn btn-primary">Ingresar</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Sección de Beneficios / Funcionamiento -->
+        <section class="features-grid">
+            <div class="glass-card feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3 class="feature-title">Sin Cuentas ni Contraseñas</h3>
+                <p class="feature-desc">El usuario solo necesita su enlace temporal. No requiere registrarse, descargar aplicaciones ni recordar claves.</p>
+            </div>
+
+            <div class="glass-card feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">Expiración y Cuota</h3>
+                <p class="feature-desc">Cada enlace cuenta con un límite de fotos (1 a 20) y vence automáticamente a las 24 horas para mayor seguridad.</p>
+            </div>
+
+            <div class="glass-card feature-card">
+                <div class="feature-icon">☁️</div>
+                <h3 class="feature-title">Calidad Original en R2</h3>
+                <p class="feature-desc">Las imágenes se preservan en su resolución original en almacenamiento Cloudflare R2 sin compresiones agresivas.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>© FotoDrop — Sistema de Entrega de Fotos con Cloudflare R2 & Workers.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('token-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const raw = document.getElementById('input-token').value.trim();
+            if (!raw) return;
+
+            let token = raw;
+            // Si el usuario pegó la URL completa, extraer el parámetro token
+            if (raw.includes('token=')) {
+                try {
+                    const parsedUrl = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+                    token = parsedUrl.searchParams.get('token') || raw;
+                } catch(e) {
+                    const match = raw.match(/token=([a-zA-Z0-9_\-]+)/);
+                    if (match) token = match[1];
+                }
+            }
+
+            window.location.href = `upload.html?token=${encodeURIComponent(token)}`;
+        });
+    </script>
+</body>
+</html>

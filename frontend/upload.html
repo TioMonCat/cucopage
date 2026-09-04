@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subida Segura de Fotos — Enlace Temporal</title>
+    <meta name="description" content="Página de subida de fotos segura con enlace de acceso temporal y cuota controlada.">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/upload.css">
+</head>
+<body>
+
+    <!-- Encabezado -->
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <span class="brand-name">Portal de Subida</span>
+            </a>
+            <div id="countdown-timer" class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                Validando enlace...
+            </div>
+        </div>
+    </header>
+
+    <main class="container upload-wrapper">
+
+        <!-- 1. Estado Cargando / Validando -->
+        <div id="loading-state" class="glass-card state-card">
+            <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 1.5rem;"></div>
+            <h2 class="state-title">Validando enlace</h2>
+            <p class="state-desc">Comprobando permisos, tiempo de expiración y cupo de fotos disponibles...</p>
+        </div>
+
+        <!-- 2. Estado de Error o Invalidez -->
+        <div id="error-state" class="glass-card state-card" style="display: none;">
+            <div id="error-icon" class="state-icon state-icon-error">⚠️</div>
+            <h2 id="error-title" class="state-title">Enlace no disponible</h2>
+            <p id="error-desc" class="state-desc">Este enlace no es válido o ha expirado.</p>
+            <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+        </div>
+
+        <!-- 3. Estado de Entrega Finalizada / Éxito -->
+        <div id="success-state" class="glass-card state-card" style="display: none;">
+            <div class="state-icon state-icon-exhausted">🎉</div>
+            <h2 class="state-title">¡Fotos entregadas con éxito!</h2>
+            <p id="success-desc" class="state-desc">Tus fotos han sido recibidas y almacenadas de forma segura. El enlace ha concluido su ciclo.</p>
+            <a href="index.html" class="btn btn-secondary">Finalizar</a>
+        </div>
+
+        <!-- 4. Contenido Principal de Subida -->
+        <div id="upload-content" style="display: none;">
+            
+            <!-- Hero Card con Estadísticas del Link -->
+            <div class="glass-card upload-hero">
+                <div class="hero-meta">
+                    <div>
+                        <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">Entrega de Fotografías</h1>
+                        <p style="font-size: 0.95rem;">Selecciona o arrastra las fotos que deseas enviar.</p>
+                    </div>
+                    <div>
+                        <span id="hero-badge" class="badge badge-activo">Activo</span>
+                    </div>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span id="stat-remaining" class="stat-value" style="color: var(--accent-cyan);">0</span>
+                        <span class="stat-label">Fotos Restantes</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="stat-uploaded" class="stat-value">0</span>
+                        <span class="stat-label">Fotos Ya Subidas</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="stat-max" class="stat-value">0</span>
+                        <span class="stat-label">Cupo Total</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zona de Arrastrar y Soltar (Dropzone) -->
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        <line x1="12" y1="12" x2="12" y2="18"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                        <circle cx="9" cy="9" r="2"></circle>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                    </svg>
+                </div>
+                <h3 class="dropzone-title">Arrastra y suelta tus fotos aquí</h3>
+                <p class="dropzone-hint">o haz clic para explorar tus archivos (JPG, PNG, WEBP, HEIC hasta 25MB)</p>
+                <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+            </div>
+
+            <!-- Cola y Previsualizaciones -->
+            <section id="queue-section" class="queue-section" style="display: none;">
+                <div class="queue-header">
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                        <h2>Fotos Seleccionadas</h2>
+                        <span id="queue-count" style="color: var(--text-muted); font-size: 0.9rem;">(0 fotos)</span>
+                    </div>
+                    <button id="btn-clear-queue" class="btn btn-secondary btn-sm">Limpiar lista</button>
+                </div>
+
+                <div id="queue-grid" class="queue-grid">
+                    <!-- Tarjetas de previsualización inyectadas por JS -->
+                </div>
+
+                <!-- Barra de Acciones Globales -->
+                <div class="actions-bar">
+                    <div>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Listo para subir al almacenamiento seguro
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="btn-complete" class="btn btn-secondary" title="Cerrar el enlace si ya no vas a subir más fotos">
+                            Terminar entrega
+                        </button>
+                        <button id="btn-upload" class="btn btn-primary">
+                            Subir Fotos
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Sistema de Subida de Fotos con Enlaces Seguros y Expiración Automática.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/upload.js"></script>
+</body>
+</html>
